@@ -1,0 +1,80 @@
+Description: Plantilla para crear instancias Server y Cliente con Security Group
+
+Parameters:
+  KeyName:
+    Description: Nombre de la key pair
+    Type: String
+    Default: vockey
+
+  VpcId:
+    Description: VPC donde se creara el Security Group
+    Type: AWS::EC2::VPC::Id
+
+Resources:
+
+  ############################################################
+  # SECURITY GROUP
+  ############################################################
+  OpenLDAPAMSASG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: Security group para OpenLDAP AMSA Server y Client
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 389
+          ToPort: 389
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 636
+          ToPort: 636
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: OpenLDAP-AMSA-SG-AutoCreated
+
+
+  ############################################################
+  # INSTANCIA SERVER
+  ############################################################
+  OpenLDAPAMSAServer:
+    Type: AWS::EC2::Instance
+    DependsOn: OpenLDAPAMSASG
+    Properties:
+      InstanceType: t2.micro
+      SecurityGroupIds:
+        - !Ref OpenLDAPAMSASG
+      KeyName: !Ref KeyName
+      ImageId: ami-0fa3fe0fa7920f68e
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          exec > /home/ec2-user/LDAPInstall.log 2>&1
+
+          set -xe
+
+          yum update -y
+
+          yum install -y git ansible
+
+          sudo ansible-pull \
+            -U https://github.com/IvanGilC/Practica3.git \
+            -d /opt/ansible \
+            -i localhost \
+            server.yml \
+            --extra-vars "PASSWORD=1234"
+
+      Tags:
+        - Key: Name
+          Value: OpenLDAP-AMSA-Server-AutoCreated

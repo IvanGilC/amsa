@@ -1,0 +1,424 @@
+Description: Networking and Infrastructure for AMSA WordPress High Availability
+Parameters:
+  KeyName:
+    Description: Nom del KeyPair ECM per SSH
+    Type: String
+    Default: vockey
+
+  AMIId:
+    Description: AMI per a instÃ ncies EC2 i LT
+    Type: String
+    Default: ami-063d43db0594b521b
+
+  DBMasterUsername:
+    Description: Usuari administrador RDS
+    Type: String
+    Default: admin
+
+  DBMasterPassword:
+    Description: Password administrador RDS (NoEcho)
+    Type: String
+    Default: h0dc?r00t?p4ssw0rd
+
+  DBUserName:
+    Description: Usuari base dades WordPress
+    Type: String
+    Default: amsa-wordpress-user
+
+  DBUserPassword:
+    Description: Password usuari WordPress DB (NoEcho)
+    Type: String
+    Default: w0rdpr3ss?p4ssw0rd
+
+  VPNAdminPassword:
+    Description: Password administrador OpenVPN (NoEcho)
+    Type: String
+    Default: amsa-pass1234
+
+Resources:
+  AMSAVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: AMSA-VPC
+
+  AMSADMZ01:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: us-east-1a
+      CidrBlock: 10.0.1.0/24
+      VpcId: !Ref AMSAVPC
+      Tags:
+        - Key: Name
+          Value: AMSA-DMZ-01
+  AMSADMZ02:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: us-east-1b
+      CidrBlock: 10.0.2.0/24
+      VpcId: !Ref AMSAVPC
+      Tags:
+        - Key: Name
+          Value: AMSA-DMZ-02
+
+  AMSAPrivate01:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: us-east-1a
+      CidrBlock: 10.0.3.0/24
+      VpcId: !Ref AMSAVPC
+      Tags:
+        - Key: Name
+          Value: AMSA-Private-01
+
+  AMSAPrivate02:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: us-east-1b
+      CidrBlock: 10.0.4.0/24
+      VpcId: !Ref AMSAVPC
+      Tags:
+        - Key: Name
+          Value: AMSA-Private-02
+
+  AMSAData:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: us-east-1c
+      CidrBlock: 10.0.5.0/24
+      VpcId: !Ref AMSAVPC
+      Tags:
+        - Key: Name
+          Value: AMSA-Data
+
+  AMSAIGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: AMSA-IGW
+
+  AMSAIGWAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref AMSAVPC
+      InternetGatewayId: !Ref AMSAIGW
+
+  AMSAEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: AMSAIGWAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: AMSA-NAT-EIP
+
+  AMSANTGW:
+    Type: AWS::EC2::NatGateway
+    DependsOn: AMSAEIP
+    Properties:
+      AllocationId: !GetAtt AMSAEIP.AllocationId
+      SubnetId: !Ref AMSADMZ01
+      Tags:
+        - Key: Name
+          Value: AMSA-NAT-Gateway
+
+  AMSAPrivate01RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref AMSAVPC
+      Tags:
+        - Key: Name
+          Value: AMSA-Private-01-RT
+
+  AMSAPrivate02RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref AMSAVPC
+      Tags:
+        - Key: Name
+          Value: AMSA-Private-02-RT
+
+  AMSADataRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref AMSAVPC
+      Tags:
+        - Key: Name
+          Value: AMSA-Data-RT
+
+  AMSADMZ01RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref AMSAVPC
+      Tags:
+        - Key: Name
+          Value: AMSA-DMZ-01-RT
+
+  AMSADMZ02RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref AMSAVPC
+      Tags:
+        - Key: Name
+          Value: AMSA-DMZ-02-RT
+
+  AMSAPrivate01RTA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref AMSAPrivate01
+      RouteTableId: !Ref AMSAPrivate01RT
+
+  AMSAPrivate02RTA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref AMSAPrivate02
+      RouteTableId: !Ref AMSAPrivate02RT
+
+  AMSADataRTA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref AMSAData
+      RouteTableId: !Ref AMSADataRT
+
+  AMSADMZ01RTA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref AMSADMZ01
+      RouteTableId: !Ref AMSADMZ01RT
+
+  AMSADMZ02RTA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref AMSADMZ02
+      RouteTableId: !Ref AMSADMZ02RT
+
+  AMSAPrivate01Route:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref AMSAPrivate01RT
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref AMSANTGW
+
+  AMSAPrivate02Route:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref AMSAPrivate02RT
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref AMSANTGW
+
+  AMSADMZ01Route:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref AMSADMZ01RT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref AMSAIGW
+
+  AMSADMZ02Route:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref AMSADMZ02RT
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref AMSAIGW
+
+  AMSAWPSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP and SSH access
+      VpcId: !Ref AMSAVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: AMSA-WP-SG
+
+  AMSADataSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable MySQL access
+      VpcId: !Ref AMSAVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !GetAtt AMSAWPSG.GroupId
+      Tags:
+        - Key: Name
+          Value: AMSA-Data-SG
+    DependsOn: AMSAWPSG
+
+  AMSADBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for AMSA RDS
+      SubnetIds:
+        - !Ref AMSAPrivate01
+        - !Ref AMSAPrivate02
+      Tags:
+        - Key: Name
+          Value: AMSA-DB-Subnet-Group
+
+  AMSADBSG:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: '20'
+      DBInstanceIdentifier: AMSA-DB
+      DBInstanceClass: db.t4g.micro
+      Engine: mariadb
+      EngineVersion: 10.11.9
+      MasterUsername: !Ref DBMasterUsername
+      MasterUserPassword: !Ref DBMasterPassword
+      VPCSecurityGroups:
+        - !GetAtt AMSADataSG.GroupId
+      DBSubnetGroupName: !Ref AMSADBSubnetGroup
+      MultiAZ: false
+      PubliclyAccessible: false
+      Tags:
+        - Key: Name
+          Value: AMSA-DB-SG
+    DependsOn:
+      - AMSADataSG
+      - AMSADBSubnetGroup
+
+  AMSADataEC2:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AMIId
+      InstanceType: t2.micro
+      KeyName: !Ref KeyName
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: '0'
+          GroupSet:
+            - !Ref AMSAWPSG
+          SubnetId: !Ref AMSAPrivate01
+      UserData: !Base64
+        Fn::Sub: |
+          #!/bin/bash
+          dnf install -y mariadb105
+          DB_HOST=${AMSADBSG.Endpoint.Address}
+          ROOT_PASSWORD=${DBMasterPassword}
+          DB_NAME="wordpress"
+          DB_USER=${DBUserName}
+          DB_USER_PASSWORD=${DBUserPassword}
+          mysql -h "$DB_HOST" -u ${DBMasterUsername} -p"$ROOT_PASSWORD" -e "CREATE DATABASE $DB_NAME;"
+          mysql -h "$DB_HOST" -u ${DBMasterUsername} -p"$ROOT_PASSWORD" -e "CREATE USER '$DB_USER'@'%' IDENTIFIED BY '$DB_USER_PASSWORD';"
+          mysql -h "$DB_HOST" -u ${DBMasterUsername} -p"$ROOT_PASSWORD" -e "GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'%';"
+          mysql -h "$DB_HOST" -u ${DBMasterUsername} -p"$ROOT_PASSWORD" -e "FLUSH PRIVILEGES;"
+      Tags:
+        - Key: Name
+          Value: AMSA-Data-EC2
+    DependsOn: AMSAWPSG
+
+  AMSAWSWPLT01:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: AMSA-WS-WP-LT01
+      LaunchTemplateData:
+        ImageId: !Ref AMIId
+        InstanceType: t2.micro
+        NetworkInterfaces:
+          - DeviceIndex: 0
+            AssociatePublicIpAddress: true
+            SubnetId: !Ref AMSAPrivate01
+            Groups:
+              - !Ref AMSAWPSG
+        UserData: !Base64
+          Fn::Sub: |
+            #!/bin/bash
+            dnf install -y wget php-mysqlnd httpd php-fpm php-mysqli php-json php php-devel php-gd expect
+            cd /tmp
+            wget https://wordpress.org/latest.tar.gz
+            tar -xzf latest.tar.gz
+            cp wordpress/wp-config-sample.php wordpress/wp-config.php
+            sed -i "s/database_name_here/wordpress/g" wordpress/wp-config.php
+            sed -i "s/username_here/${DBUserName}/g" wordpress/wp-config.php
+            sed -i "s/password_here/${DBUserPassword}/g" wordpress/wp-config.php
+            sed -i "s/localhost/${AMSADBSG.Endpoint.Address}/g" wordpress/wp-config.php
+            cp -r wordpress/* /var/www/html/
+            sed -i 's/AllowOverride None/AllowOverride All/g' /etc/httpd/conf/httpd.conf
+            chown -R apache:apache /var/www
+            chmod 2775 /var/www
+            sudo systemctl enable httpd
+            sudo systemctl start httpd
+      TagSpecifications:
+        - ResourceType: launch-template
+          Tags:
+            - Key: Name
+              Value: AMSA-WS-WP-LT01
+    DependsOn: AMSAWPSG
+
+  AMSAOpenVPNSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable OpenVPN access
+      VpcId: !Ref AMSAVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: udp
+          FromPort: 1194
+          ToPort: 1194
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 943
+          ToPort: 943
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: AMSA-OpenVPN-SG
+
+  AMSAEC2OpenVPN:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-0bbdd8c17ed981ef9 # Ubuntu 22.04 LTS
+      InstanceType: t2.micro
+      KeyName: !Ref KeyName
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          GroupSet:
+            - !Ref AMSAOpenVPNSG
+          SubnetId: !Ref AMSADMZ01
+      UserData: !Base64
+        Fn::Sub: |
+          #!/bin/bash
+          set -eux
+          apt-get update -y
+          apt-get install -y ca-certificates gnupg wget net-tools
+          wget -qO /etc/apt/trusted.gpg.d/as-repo-public.asc https://as-repository.openvpn.net/as-repo-public.asc
+          echo "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/as-repo-public.asc] http://as-repository.openvpn.net/as/debian jammy main" \
+            | tee /etc/apt/sources.list.d/openvpn-as-repo.list
+          apt-get update -y
+          apt-get install -y openvpn-as
+          sleep 20          
+          PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+          /usr/local/openvpn_as/scripts/sacli --user "openvpn" --new_pass "${VPNAdminPassword}" SetLocalPassword
+          /usr/local/openvpn_as/scripts/sacli --key "host.name" --value "$PUBLIC_IP" ConfigPut
+          /usr/local/openvpn_as/scripts/sacli --key "vpn.client.routing.reroute_gw" --value "false" ConfigPut
+          /usr/local/openvpn_as/scripts/sacli --key "vpn.server.routing.private_network.0" --value "10.0.1.0/24" ConfigPut
+          /usr/local/openvpn_as/scripts/sacli --key "vpn.server.routing.private_network.1" --value "10.0.2.0/24" ConfigPut
+          /usr/local/openvpn_as/scripts/sacli --key "vpn.server.routing.private_network.2" --value "10.0.3.0/24" ConfigPut
+          /usr/local/openvpn_as/scripts/sacli start
+          systemctl restart openvpnas
+      Tags:
+        - Key: Name
+          Value: AMSA-OpenVPN-EC2
+    DependsOn: AMSAOpenVPNSG

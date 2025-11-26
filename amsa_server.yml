@@ -1,0 +1,286 @@
+---
+- name: Instalacion completa de OpenLDAP compilado + configuracion + LAM
+  hosts: ldap
+  become: yes
+  vars:
+    openldap_ver: "2.6.3"
+    ldap_base: "dc=amsa,dc=udl,dc=cat"
+    ldap_dc: "amsa"
+    ldap_admin_password: "1234"
+    #ldap_admin_password: "{{ LDAPAdminPassword }}"
+    pki_path: "/etc/openldap/certs"
+
+  tasks:
+
+    # ------------------------------
+    # Instalacion de dependencias
+    # ------------------------------
+    - name: Instalar paquetes necesarios
+      dnf:
+        name:
+          - cyrus-sasl-devel
+          - make
+          - libtool
+          - autoconf
+          - libtool-ltdl-devel
+          - openssl-devel
+          - libdb-devel
+          - tar
+          - gcc
+          - perl
+          - perl-devel
+          - wget
+          - vim
+        state: present
+
+    # ------------------------------
+    # Descargar y compilar OpenLDAP
+    # ------------------------------
+    - name: Descargar tarball de OpenLDAP
+      get_url:
+        url: "ftp://ftp.openldap.org/pub/OpenLDAP/openldap-release/openldap-{{ openldap_ver }}.tgz"
+        dest: "/tmp/openldap-{{ openldap_ver }}.tgz"
+
+    - name: Extraer codigo fuente
+      unarchive:
+        src: "/tmp/openldap-{{ openldap_ver }}.tgz"
+        dest: /tmp
+        remote_src: yes
+      args:
+        creates: "/tmp/openldap-{{ openldap_ver }}"
+
+    - name: Configurar OpenLDAP
+      command: >
+        ./configure --prefix=/usr --sysconfdir=/etc --disable-static
+        --enable-debug --with-tls=openssl --with-cyrus-sasl --enable-dynamic
+        --enable-crypt --enable-spasswd --enable-slapd --enable-modules
+        --enable-rlookups --disable-sql --enable-ppolicy --enable-syslog
+      args:
+        chdir: "/tmp/openldap-{{ openldap_ver }}"
+      creates: "/usr/libexec/slapd"
+
+    - name: Compilar OpenLDAP
+      command: make
+      args:
+        chdir: "/tmp/openldap-{{ openldap_ver }}"
+      when: not ("/usr/libexec/slapd" in ansible_facts.packages)
+
+    - name: make depend
+      command: make depend
+      args:
+        chdir: "/tmp/openldap-{{ openldap_ver }}"
+
+    - name: make install
+      command: make install
+      args:
+        chdir: "/tmp/openldap-{{ openldap_ver }}"
+
+    # ------------------------------
+    # Crear usuario y permisos
+    # ------------------------------
+    - name: Crear grupo LDAP
+      group:
+        name: ldap
+        gid: 55
+        state: present
+
+    - name: Crear usuario LDAP
+      user:
+        name: ldap
+        uid: 55
+        group: 55
+        shell: /usr/sbin/nologin
+        home: /var/lib/openldap
+        create_home: no
+        system: yes
+
+    - name: Crear directorios
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: ldap
+        group: ldap
+      loop:
+        - /var/lib/openldap
+        - /etc/openldap/slapd.d
+
+    # ------------------------------
+    # systemd unit
+    # ------------------------------
+    - name: Configurar servicio slapd
+      copy:
+        dest: /etc/systemd/system/slapd.service
+        content: |
+          [Unit]
+          Description=OpenLDAP Server Daemon
+          After=syslog.target network-online.target
+
+          [Service]
+          Type=forking
+          PIDFile=/var/lib/openldap/slapd.pid
+          Environment="SLAPD_URLS=ldap:/// ldapi:/// ldaps:///"
+          Environment="SLAPD_OPTIONS=-F /etc/openldap/slapd.d"
+          ExecStart=/usr/libexec/slapd -u ldap -g ldap -h ${SLAPD_URLS} $SLAPD_OPTIONS
+
+          [Install]
+          WantedBy=multi-user.target
+      notify: systemd_reload
+
+    # ------------------------------
+    # Generación contraseñas
+    # ------------------------------
+    - name: Generar hash SSHA512
+      command: >
+        slappasswd -h "{SSHA512}" -s "{{ ldap_admin_password }}"
+        -o module-load=pw-sha2.la
+        -o module-path=/usr/local/libexec/openldap
+      register: ldap_hash
+      changed_when: false
+
+    # ------------------------------
+    # Crear slapd.ldif
+    # ------------------------------
+    - name: Crear slapd.ldif
+      template:
+        dest: /etc/openldap/slapd.ldif
+        src: slapd.ldif.j2
+
+    - name: Cargar BD config
+      command: >
+        slapadd -n 0 -F /etc/openldap/slapd.d
+        -l /etc/openldap/slapd.ldif
+      args:
+        creates: "/etc/openldap/slapd.d/cn=config.ldif"
+
+    - name: Permisos slapd.d
+      file:
+        path: /etc/openldap/slapd.d
+        owner: ldap
+        group: ldap
+        recurse: yes
+
+    # ------------------------------
+    # Activar servicio
+    # ------------------------------
+    - name: Iniciar y habilitar slapd
+      service:
+        name: slapd
+        enabled: yes
+        state: started
+
+    # ------------------------------
+    # Configuración base DN
+    # ------------------------------
+    - name: Crear rootdn.ldif
+      template:
+        src: rootdn.ldif.j2
+        dest: /tmp/rootdn.ldif
+
+    - name: Importar rootdn
+      command: ldapadd -Y EXTERNAL -H ldapi:/// -f /tmp/rootdn.ldif
+      changed_when: false
+
+    - name: Crear estructura base
+      template:
+        src: basedn.ldif.j2
+        dest: /tmp/basedn.ldif
+
+    - name: Importar base DN
+      command: ldapadd -Y EXTERNAL -H ldapi:/// -f /tmp/basedn.ldif
+      changed_when: false
+
+    # ------------------------------
+    # Usuarios y grupos
+    # ------------------------------
+    - name: Crear estructura usuarios
+      template:
+        src: users.ldif.j2
+        dest: /tmp/users.ldif
+
+    - name: Importar usuarios
+      command: ldapadd -Y EXTERNAL -H ldapi:/// -f /tmp/users.ldif
+      changed_when: false
+
+    # ------------------------------
+    # Certificados TLS
+    # ------------------------------
+    - name: Crear directorio PKI
+      file:
+        path: "{{ pki_path }}"
+        state: directory
+        owner: ldap
+        group: ldap
+
+    - name: Generar certificado TLS
+      command: >
+        openssl req -days 500 -newkey rsa:4096
+        -keyout {{ pki_path }}/ldapkey.pem -nodes
+        -sha256 -x509 -out {{ pki_path }}/ldapcert.pem
+        -subj "/C=ES/ST=Spain/L=Igualada/O=UdL/OU=IT/CN={{ inventory_hostname }}/emailAddress=admin@udl.cat"
+      args:
+        creates: "{{ pki_path }}/ldapkey.pem"
+
+    - name: Permisos key
+      file:
+        path: "{{ pki_path }}/ldapkey.pem"
+        owner: ldap
+        group: ldap
+        mode: 0400
+
+    - name: Crear cacerts.pem
+      copy:
+        src: "{{ pki_path }}/ldapcert.pem"
+        dest: "{{ pki_path }}/cacerts.pem"
+
+    - name: Crear LDIF TLS
+      copy:
+        dest: /tmp/add-tls.ldif
+        content: |
+          dn: cn=config
+          changetype: modify
+          add: olcTLSCACertificateFile
+          olcTLSCACertificateFile: {{ pki_path }}/cacerts.pem
+          -
+          add: olcTLSCertificateKeyFile
+          olcTLSCertificateKeyFile: {{ pki_path }}/ldapkey.pem
+          -
+          add: olcTLSCertificateFile
+          olcTLSCertificateFile: {{ pki_path }}/ldapcert.pem
+
+    - name: Importar TLS
+      command: ldapadd -Y EXTERNAL -H ldapi:/// -f /tmp/add-tls.ldif
+
+    # ------------------------------
+    # LAM (Web)
+    # ------------------------------
+    - name: Instalar dependencias httpd + php + lam
+      dnf:
+        name:
+          - httpd
+          - php
+          - php-ldap
+          - php-mbstring
+          - php-gd
+          - php-gmp
+          - php-zip
+        state: present
+
+    - name: Habilitar Apache
+      service:
+        name: httpd
+        state: started
+        enabled: yes
+
+    - name: Descargar LAM
+      get_url:
+        url: "https://github.com/LDAPAccountManager/lam/releases/download/9.0.RC1/ldap-account-manager-9.0.RC1-0.fedora.1.noarch.rpm"
+        dest: /tmp/lam.rpm
+
+    - name: Instalar LAM
+      dnf:
+        name: /tmp/lam.rpm
+        state: present
+
+  handlers:
+    - name: systemd_reload
+      command: systemctl daemon-reload
