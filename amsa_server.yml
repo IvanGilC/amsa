@@ -1,6 +1,6 @@
 ---
 - name: Instalacion completa de OpenLDAP compilado + configuracion + LAM
-  hosts: ldap
+  hosts: localhost
   become: yes
 
   tasks:
