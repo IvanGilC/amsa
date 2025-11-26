@@ -69,11 +69,10 @@ Resources:
           yum install -y git ansible
 
           sudo ansible-pull \
-            -U https://github.com/IvanGilC/Practica3.git \
+            -U https://github.com/IvanGilC/amsa.git \
             -d /opt/ansible \
             -i localhost \
-            server.yml \
-            --extra-vars "PASSWORD=1234"
+            amsa_server.yml
 
       Tags:
         - Key: Name
