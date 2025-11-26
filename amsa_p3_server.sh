@@ -40,12 +40,12 @@ useradd -r -M -d /var/lib/openldap -u 55 -g 55 -s /usr/sbin/nologin ldap
 # configuracion del servicio
 mkdir /var/lib/openldap
 mkdir /etc/openldap/slapd.d
-sudo chown -R ldap:ldap /var/lib/openldap
-sudo chown root:ldap /etc/openldap/slapd.conf
-sudo chmod 640 /etc/openldap/slapd.conf
+chown -R ldap:ldap /var/lib/openldap
+chown root:ldap /etc/openldap/slapd.conf
+chmod 640 /etc/openldap/slapd.conf
 
 # fichero de configuracion de LDAP
-sudo bash -c "cat > /etc/systemd/system/slapd.service << 'EOL'
+bash -c "cat > /etc/systemd/system/slapd.service << 'EOL'
 [Unit]
 Description=OpenLDAP Server Daemon
 After=syslog.target network-online.target
@@ -66,7 +66,7 @@ EOL
 
 # generacion de contrasenas con SHA-512
 PASSWORD="${LDAPAdminPassword}"
-HASH=$(slappasswd -h "{SSHA512}" -s "1234" -o module-load=pw-sha2.la -o module-path=/usr/local/libexec/openldap)
+HASH=$(slappasswd -h "{SSHA512}" -s $PASSWORD -o module-load=pw-sha2.la -o module-path=/usr/local/libexec/openldap)
 
 # CREACION DE BASE DE DATOS
 # creamos un fichero de configuracion
@@ -250,8 +250,7 @@ done
 ldapadd -Y EXTERNAL -H ldapi:/// -f users.ldif
 
 # configuramos los certificados tls
-PIP=$(curl ifconfig.me)
-HOSTNAME=$(dig -x $PIP +short)
+HOSTNAME="${HOSTNAME_OVERRIDE:-$HOSTNAME}"
 bash -c " cat << EOL >> ldapcert.ldif
 commonname=$HOSTNAME
 country=ES
