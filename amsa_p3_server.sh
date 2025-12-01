@@ -48,7 +48,7 @@ chown root:ldap /etc/openldap/slapd.conf
 chmod 640 /etc/openldap/slapd.conf
 
 # fichero de configuracion de LDAP
-cat > /etc/systemd/system/slapd.service << 'EOL'
+sudo bash -c "cat > /etc/systemd/system/slapd.service << 'EOL'
 [Unit]
 Description=OpenLDAP Server Daemon
 After=syslog.target network-online.target
@@ -58,13 +58,13 @@ Documentation=man:slapd-mdb
 [Service]
 Type=forking
 PIDFile=/var/lib/openldap/slapd.pid
-Environment="SLAPD_URLS=ldap:/// ldapi:/// ldaps:///"
-Environment="SLAPD_OPTIONS=-F /etc/openldap/slapd.d"
-ExecStart=/usr/libexec/slapd -u ldap -g ldap -h ${SLAPD_URLS} $SLAPD_OPTIONS
+Environment=\"SLAPD_URLS=ldap:/// ldapi:/// ldaps:///\"
+Environment=\"SLAPD_OPTIONS=-F /etc/openldap/slapd.d\"
+ExecStart=/usr/libexec/slapd -u ldap -g ldap -h \${SLAPD_URLS} \$SLAPD_OPTIONS
 
 [Install]
 WantedBy=multi-user.target
-EOL
+EOL"
 
 mv /etc/openldap/slapd.ldif /etc/openldap/slapd.ldif.default
 
@@ -79,7 +79,7 @@ objectClass: olcGlobal
 cn: config
 olcArgsFile: /var/lib/openldap/slapd.args
 olcPidFile: /var/lib/openldap/slapd.pid
-olcTLSCipherSuite: TLSv1.2:HIGH:\!aNULL:\!eNULL
+olcTLSCipherSuite: TLSv1.2:HIGH:!aNULL:!eNULL
 olcTLSProtocolMin: 3.3
 
 dn: cn=schema,cn=config
@@ -132,7 +132,7 @@ systemctl daemon-reload
 systemctl enable --now slapd
 
 # configuracion en la estructura de la base de datos un usuario admin
-cat << EOL >> rootdn.ldif
+cat << EOL >> /etc/openldap/rootdn.ldif
 dn: olcDatabase=mdb,cn=config
 objectClass: olcDatabaseConfig
 objectClass: olcMdbConfig
@@ -163,10 +163,10 @@ olcAccess: to dn.subtree="$BASE"
 EOL
 
 # cargamos la configuracion en la base de datos
-ldapadd -Y EXTERNAL -H ldapi:/// -f rootdn.ldif
+ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/rootdn.ldif
 
 # creamos la configuracion para usuarios y grupos
-cat << EOL >> basedn.ldif
+cat << EOL >> /etc/openldap/basedn.ldif
 dn: $BASE
 objectClass: dcObject
 objectClass: organization
@@ -191,10 +191,10 @@ ou: system
 EOL
 
 # cargamos la configuracion en la base de datos
-ldapadd -Y EXTERNAL -H ldapi:/// -f basedn.ldif
+ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/basedn.ldif
 
 # creacion de usuario OSProxy
-cat << EOL >> users.ldif
+cat << EOL >> /etc/openldap/users.ldif
 dn: cn=osproxy,ou=system,$BASE
 objectClass: organizationalRole
 objectClass: simpleSecurityObject
@@ -204,16 +204,14 @@ description: OS proxy for resolving UIDs/GIDs
 EOL
 
 groups=("programadors" "dissenyadors")
-gids=("5000" "5001")
-users=("jordi" "manel")
-sn=("mateo" "lopez")
-uids=("4000" "4001")
-programadors=("jordi")
-dissenyadors=("manel")
+gids=("4000" "5000")
+users=("ramon" "manel")
+sns=("mateo" "lopez")
+uids=("4001" "5001")
 
 for (( j=0; j<${#groups[@]}; j++ ))
 do
-cat << EOL >> users.ldif
+cat << EOL >> /etc/openldap/users.ldif
 dn: cn=${groups[$j]},ou=groups,$BASE
 objectClass: posixGroup
 cn: ${groups[$j]}
@@ -223,22 +221,24 @@ done
 
 for (( j=0; j<${#users[@]}; j++ ))
 do
-cat << EOL >> users.ldif
+cat << EOL >> /etc/openldap/users.ldif
 dn: uid=${users[$j]},ou=users,$BASE
+objectClass: inetOrgPerson
 objectClass: posixAccount
 objectClass: shadowAccount
-objectClass: inetOrgPerson
 cn: ${users[$j]}
-sn: ${sn[$j]}
+sn: ${sns[$j]}
+uid: ${users[$j]}
 uidNumber: ${uids[$j]}
 gidNumber: ${uids[$j]}
 homeDirectory: /home/${users[$j]}
-loginShell: /bin/sh
+loginShell: /bin/bash
+userPassword: $HASH
 EOL
 done
 
 # cargamos la configuracion en la base de datos
-ldapadd -Y EXTERNAL -H ldapi:/// -f users.ldif
+ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/users.ldif
 
 # configuramos los certificados tls
 commonname=$HOSTNAME
@@ -257,10 +257,10 @@ openssl req -days 500 -newkey rsa:4096 \
 # otorgamos los permisos necessarios
 chown ldap:ldap "$PATH_PKI/ldapkey.pem"
 chmod 400 "$PATH_PKI/ldapkey.pem"
-cat "$PATH_PKI/ldapcert.pem" > "$PATH_PKI/cacerts.pem"
+cp "$PATH_PKI/ldapcert.pem" "$PATH_PKI/cacerts.pem"
 
 # creamos el fichero add-tls
-cat << EOL >> add-tls.ldif
+cat << EOL >> /etc/openldap/add-tls.ldif
 dn: cn=config
 changetype: modify
 add: olcTLSCACertificateFile
@@ -274,7 +274,10 @@ olcTLSCertificateFile: "$PATH_PKI/ldapcert.pem"
 EOL
 
 # cargamos la configuracion
-ldapadd -Y EXTERNAL -H ldapi:/// -f add-tls.ldif
+sudo ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/add-tls.ldif
+
+# reiniciamos el servicio LDAP
+systemctl restart slapd
 
 # INSTALAMOS CLIENTE WEB DE LDAP
 # instalamos dependencias de LAM

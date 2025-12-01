@@ -1,41 +1,16 @@
 #!/bin/bash
-
-
-echo "This script will configure the client to connect to the LDAP server"
-
-echo "... Did you copy the cacert.crt from the server to the client? (y/n)?"
-
-read -r response
-
-if [ "$response" != "y" ]; then
-    echo "Exiting..."
-    exit 1
-fi
-
 # Variables
-LDAP_SERVER="ec2-13-223-233-203.compute-1.amazonaws.com"
+LDAP_SERVER=$1
 BASE="dc=amsa,dc=udl,dc=cat"
 PATH_PKI="/etc/pki/tls"
 
-echo "... Setting the hostname to $LDAP_SERVER"
-echo "... Setting the base to $BASE"
-echo "... Setting the path to $PATH_PKI"
+# dews
+curl -f http://$LDAP_SERVER:8080/cacerts.pem -o $PATH_PKI/cacerts.pem
 
-echo "... Are you sure you want to continue? (y/n), are this values correct?"
+# instalamos herramientas necessarias
+dnf install -y openldap-clients sssd sssd-tools authselect oddjob-mkhomedir
 
-read -r response
-
-if [ "$response" != "y" ]; then
-    echo "Exiting..."
-    exit 1
-fi
-
-echo "... Install deps and tools"
-
-dnf install openldap-clients authselect sssd sssd-tools oddjob-mkhomedir -y
-
-echo "... Configuring sssd"
-
+# instalamos sssd
 cat << EOL >> /etc/sssd/sssd.conf
 [sssd]
 services = nss, pam, sudo
@@ -82,6 +57,7 @@ authselect select sssd --force
 # Oddjob is a helper service that creates home directories for users the first time they log in
 
 echo "... Configuring oddjob"
+# configurar oddjob ()
 systemctl enable --now oddjobd
 echo "session optional pam_oddjob_mkhomedir.so skel=/etc/skel/ umask=0022" >> /etc/pam.d/system-auth 
 systemctl restart oddjobd
