@@ -66,8 +66,8 @@ Resources:
           #!/bin/bash
           exec > /home/ec2-user/LDAPInstall.log 2>&1
           set -xe
-          yum update -y
-          yum install -y git ansible
+          sudo yum update -y
+          sudo yum install -y git ansible
 
           sudo ansible-pull \
             -U https://github.com/IvanGilC/amsa.git \
