@@ -74,6 +74,7 @@ Resources:
             -d /opt/ansible \
             -i localhost
           
+          cd /opt/ansible
           sudo bash amsa_p3_server.sh
 
           # Python HTTP Server para pasar el certificado al cliente
