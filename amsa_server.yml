@@ -6,7 +6,7 @@
   tasks:
     - name: Instalar OpenLDAP
       shell: |
-        sudo bash ldapserver.sh
+        sudo bash amsa_p3_server.sh
       args:
         chdir: /opt/ansible
 

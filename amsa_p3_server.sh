@@ -1,19 +1,22 @@
 #!/bin/bash
 
-# cambiamos a usuario raiz para no usar sudo
-sudo -i
+# variables necessarias
+PASSWORD="1234"
+VER="2.6.3"
+BASE="dc=amsa,dc=udl,dc=cat"
+PATH_PKI="/etc/pki/tls"
+DC="amsa"
+HOSTNAME="${HOSTNAME_OVERRIDE:-$HOSTNAME}"
 
 # instalamos herramientas necessarias para usar LDAP
 dnf install \
-cyrus-sasl-devel make libtool autoconf libtool-ltdl-devel \
-openssl-devel libdb-devel tar gcc perl perl-devel wget vim -y
+ cyrus-sasl-devel make libtool autoconf libtool-ltdl-devel \
+ openssl-devel libdb-devel tar gcc perl perl-devel wget vim screen -y
 
 # descargamos e instalamos el paquete OpenLDAP con las configuraciones necesarias
 cd /tmp
-cat > install-ldap.sh << 'EOL'
+cat << EOL >> install-ldap.sh
 #!/bin/bash
-VER="2.6.3"
-cd /tmp
 wget ftp://ftp.openldap.org/pub/OpenLDAP/openldap-release/openldap-$VER.tgz
 tar xzf openldap-$VER.tgz
 cd openldap-$VER
@@ -45,7 +48,7 @@ chown root:ldap /etc/openldap/slapd.conf
 chmod 640 /etc/openldap/slapd.conf
 
 # fichero de configuracion de LDAP
-bash -c "cat > /etc/systemd/system/slapd.service << 'EOL'
+cat > /etc/systemd/system/slapd.service << 'EOL'
 [Unit]
 Description=OpenLDAP Server Daemon
 After=syslog.target network-online.target
@@ -55,22 +58,22 @@ Documentation=man:slapd-mdb
 [Service]
 Type=forking
 PIDFile=/var/lib/openldap/slapd.pid
-Environment=\"SLAPD_URLS=ldap:/// ldapi:/// ldaps:///\"
-Environment=\"SLAPD_OPTIONS=-F /etc/openldap/slapd.d\"
-ExecStart=/usr/libexec/slapd -u ldap -g ldap -h \${SLAPD_URLS} \$SLAPD_OPTIONS
+Environment="SLAPD_URLS=ldap:/// ldapi:/// ldaps:///"
+Environment="SLAPD_OPTIONS=-F /etc/openldap/slapd.d"
+ExecStart=/usr/libexec/slapd -u ldap -g ldap -h ${SLAPD_URLS} $SLAPD_OPTIONS
 
 [Install]
 WantedBy=multi-user.target
 EOL
-"
+
+mv /etc/openldap/slapd.ldif /etc/openldap/slapd.ldif.default
 
 # generacion de contrasenas con SHA-512
-PASSWORD="${LDAPAdminPassword}"
 HASH=$(slappasswd -h "{SSHA512}" -s $PASSWORD -o module-load=pw-sha2.la -o module-path=/usr/local/libexec/openldap)
 
 # CREACION DE BASE DE DATOS
 # creamos un fichero de configuracion
-bash -c "cat > /etc/openldap/slapd.ldif << 'EOL'
+cat << EOL >> /etc/openldap/slapd.ldif
 dn: cn=config
 objectClass: olcGlobal
 cn: config
@@ -105,9 +108,9 @@ objectClass: olcDatabaseConfig
 objectClass: olcFrontendConfig
 olcDatabase: frontend
 olcPasswordHash: $HASH
-olcAccess: to dn.base=\"cn=Subschema\" by * read
+olcAccess: to dn.base="cn=Subschema" by * read
 olcAccess: to *
-  by dn.base=\"gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth\" manage
+  by dn.base="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" manage
   by * none
 
 dn: olcDatabase=config,cn=config
@@ -115,9 +118,9 @@ objectClass: olcDatabaseConfig
 olcDatabase: config
 olcRootDN: cn=config
 olcAccess: to *
-  by dn.base=\"gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth\" manage
+  by dn.base="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" manage
   by * none
-EOL"
+EOL
 
 # cargamos la configuracion a la base de datos
 cd /etc/openldap/
@@ -129,8 +132,7 @@ systemctl daemon-reload
 systemctl enable --now slapd
 
 # configuracion en la estructura de la base de datos un usuario admin
-BASE="dc=amsa,dc=udl,dc=cat"
-bash -c "cat << EOL >> rootdn.ldif
+cat << EOL >> rootdn.ldif
 dn: olcDatabase=mdb,cn=config
 objectClass: olcDatabaseConfig
 objectClass: olcMdbConfig
@@ -148,26 +150,23 @@ olcDbIndex: loginShell pres,eq
 olcAccess: to attrs=userPassword,shadowLastChange,shadowExpire
   by self write
   by anonymous auth
-  by dn.subtree=\"gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth\" manage
-  by dn.subtree=\"ou=system,$BASE\" read
+  by dn.subtree="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" manage
+  by dn.subtree="ou=system,$BASE" read
   by * none
-olcAccess: to dn.subtree=\"ou=system,$BASE\"
-  by dn.subtree=\"gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth\" manage
+olcAccess: to dn.subtree="ou=system,$BASE"
+  by dn.subtree="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" manage
   by * none
-olcAccess: to dn.subtree=\"$BASE\"
-  by dn.subtree=\"gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth\" manage
+olcAccess: to dn.subtree="$BASE"
+  by dn.subtree="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" manage
   by users read
   by * none
-EOL"
+EOL
 
 # cargamos la configuracion en la base de datos
 ldapadd -Y EXTERNAL -H ldapi:/// -f rootdn.ldif
 
 # creamos la configuracion para usuarios y grupos
-BASE="dc=amsa,dc=udl,dc=cat"
-DC="amsa"
-
-bash -c "cat << EOL >> basedn.ldif
+cat << EOL >> basedn.ldif
 dn: $BASE
 objectClass: dcObject
 objectClass: organization
@@ -189,69 +188,59 @@ dn: ou=system,$BASE
 objectClass: organizationalUnit
 objectClass: top
 ou: system
-EOL"
+EOL
 
 # cargamos la configuracion en la base de datos
 ldapadd -Y EXTERNAL -H ldapi:/// -f basedn.ldif
 
 # creacion de usuario OSProxy
-bash -c '
-BASE="dc=amsa,dc=udl,dc=cat"
-
-groups=("programadors" "dissenyadors")
-gids=("5000" "5001")
-users=("ramon" "manel")
-sns=("mateo" "lopez")
-uids=("4000" "4001")
-
-cat > users.ldif << EOL1
-dn: cn=osproxy,ou=system,${BASE}
+cat << EOL >> users.ldif
+dn: cn=osproxy,ou=system,$BASE
 objectClass: organizationalRole
 objectClass: simpleSecurityObject
 cn: osproxy
-userPassword:$HASH
+userPassword: $HASH
 description: OS proxy for resolving UIDs/GIDs
+EOL
 
-dn: ou=groups,${BASE}
-objectClass: posixGroup
-ou: groups
+groups=("programadors" "dissenyadors")
+gids=("5000" "5001")
+users=("jordi" "manel")
+sn=("mateo" "lopez")
+uids=("4000" "4001")
+programadors=("jordi")
+dissenyadors=("manel")
 
-dn: ou=users,${BASE}
-objectClass: posixGroup
-ou: users
-EOL1
-
-for (( j=0; j<${#groups[@]}; j++ )); do
-cat >> users.ldif << EOL2
-dn: cn=${groups[$j]},ou=groups,${BASE}
+for (( j=0; j<${#groups[@]}; j++ ))
+do
+cat << EOL >> users.ldif
+dn: cn=${groups[$j]},ou=groups,$BASE
 objectClass: posixGroup
 cn: ${groups[$j]}
 gidNumber: ${gids[$j]}
-EOL2
+EOL
 done
 
-for (( j=0; j<${#users[@]}; j++ )); do
-cat >> users.ldif << EOL3
-dn: uid=${users[$j]},ou=users,${BASE}
+for (( j=0; j<${#users[@]}; j++ ))
+do
+cat << EOL >> users.ldif
+dn: uid=${users[$j]},ou=users,$BASE
 objectClass: posixAccount
 objectClass: shadowAccount
 objectClass: inetOrgPerson
 cn: ${users[$j]}
-sn: ${sns[$j]}
+sn: ${sn[$j]}
 uidNumber: ${uids[$j]}
 gidNumber: ${uids[$j]}
 homeDirectory: /home/${users[$j]}
 loginShell: /bin/sh
-EOL3
+EOL
 done
-'
 
 # cargamos la configuracion en la base de datos
 ldapadd -Y EXTERNAL -H ldapi:/// -f users.ldif
 
 # configuramos los certificados tls
-HOSTNAME="${HOSTNAME_OVERRIDE:-$HOSTNAME}"
-bash -c " cat << EOL >> ldapcert.ldif
 commonname=$HOSTNAME
 country=ES
 state=Spain
@@ -260,30 +249,29 @@ organization=UdL
 organizationalunit=IT
 email=admin@udl.cat
 
-sudo openssl req -days 500 -newkey rsa:4096 \
+openssl req -days 500 -newkey rsa:4096 \
     -keyout "$PATH_PKI/ldapkey.pem" -nodes \
     -sha256 -x509 -out "$PATH_PKI/ldapcert.pem" \
     -subj "/C=$country/ST=$state/L=$locality/O=$organization/OU=$organizationalunit/CN=$commonname/emailAddress=$email"
-EOL"
 
 # otorgamos los permisos necessarios
-sudo chown ldap:ldap "$PATH_PKI/ldapkey.pem"
-sudo chmod 400 "$PATH_PKI/ldapkey.pem"
-sudo bash -c "cat \"$PATH_PKI/ldapcert.pem\" > \"$PATH_PKI/cacerts.pem\""
+chown ldap:ldap "$PATH_PKI/ldapkey.pem"
+chmod 400 "$PATH_PKI/ldapkey.pem"
+cat "$PATH_PKI/ldapcert.pem" > "$PATH_PKI/cacerts.pem"
 
 # creamos el fichero add-tls
-sudo bash -c " cat << EOL >> add-tls.ldif
+cat << EOL >> add-tls.ldif
 dn: cn=config
 changetype: modify
 add: olcTLSCACertificateFile
-olcTLSCACertificateFile: \"$PATH_PKI/cacerts.pem\"
+olcTLSCACertificateFile: "$PATH_PKI/cacerts.pem"
 -
 add: olcTLSCertificateKeyFile
-olcTLSCertificateKeyFile: \"$PATH_PKI/ldapkey.pem\"
+olcTLSCertificateKeyFile: "$PATH_PKI/ldapkey.pem"
 -
 add: olcTLSCertificateFile
-olcTLSCertificateFile: \"$PATH_PKI/ldapcert.pem\"
-EOL"
+olcTLSCertificateFile: "$PATH_PKI/ldapcert.pem"
+EOL
 
 # cargamos la configuracion
 ldapadd -Y EXTERNAL -H ldapi:/// -f add-tls.ldif
