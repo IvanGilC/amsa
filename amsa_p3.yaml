@@ -72,8 +72,13 @@ Resources:
           sudo ansible-pull \
             -U https://github.com/IvanGilC/amsa.git \
             -d /opt/ansible \
-            -i localhost \
-            amsa_server.yml
+            -i localhost
+          
+          sudo bash amsa_p3_server.sh
+
+          # Python HTTP Server para pasar el certificado al cliente
+          cd /etc/pki/tls
+          nohup python3 -m http.server 8080 &
 
       Tags:
         - Key: Name
