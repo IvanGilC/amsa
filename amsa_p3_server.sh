@@ -283,4 +283,4 @@ systemctl enable --now httpd
 
 # descargamos y descomprimimos LAM
 wget https://github.com/LDAPAccountManager/lam/releases/download/9.0.RC1/ldap-account-manager-9.0.RC1-0.fedora.1.noarch.rpm
-dnf install ldap-account-manager-9.0.RC1-0.fedora.1.noarch.rpm
+dnf install -y ldap-account-manager-9.0.RC1-0.fedora.1.noarch.rpm
