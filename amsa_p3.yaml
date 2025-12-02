@@ -88,7 +88,7 @@ Resources:
   ############################################################
   OpenLDAPAMSAClient:
     Type: AWS::EC2::Instance
-    DependsOn: OpenLDAPAMSASG
+    DependsOn: OpenLDAPAMSAServer
     Properties:
       InstanceType: t2.micro
       SecurityGroupIds:
