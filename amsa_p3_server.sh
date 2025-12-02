@@ -194,14 +194,9 @@ EOL
 ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/basedn.ldif
 
 # creacion de usuario OSProxy
-cat << EOL >> /etc/openldap/users.ldif
-dn: cn=osproxy,ou=system,$BASE
-objectClass: organizationalRole
-objectClass: simpleSecurityObject
-cn: osproxy
-userPassword: $HASH
-description: OS proxy for resolving UIDs/GIDs
-EOL
+#cat << EOL >> /etc/openldap/users.ldif
+sudo bash -c '
+BASE="dc=amsa,dc=udl,dc=cat"
 
 groups=("programadors" "dissenyadors")
 gids=("4000" "5000")
@@ -209,20 +204,32 @@ users=("ramon" "manel")
 sns=("mateo" "lopez")
 uids=("4001" "5001")
 
-for (( j=0; j<${#groups[@]}; j++ ))
-do
-cat << EOL >> /etc/openldap/users.ldif
-dn: cn=${groups[$j]},ou=groups,$BASE
+# Crear fitxer LDIF
+cat > /etc/openldap/users.ldif << EOL1
+dn: cn=osproxy,ou=system,${BASE}
+objectClass: organizationalRole
+objectClass: simpleSecurityObject
+cn: osproxy
+userPassword: {SSHA512}CBVaUdQC9mVvAi+0O92J3hA+aPdiWUqf4lVr6bGRAUsFJX5aFOEb+1pSsY8PQwW1UKuuCGO2+160HotnfjXIaRKlryVekLnu
+description: OS proxy for resolving UIDs/GIDs
+
+EOL1
+
+# GRUPS
+for (( j=0; j<${#groups[@]}; j++ )); do
+cat >> /etc/openldap/users.ldif << EOL2
+dn: cn=${groups[$j]},ou=groups,${BASE}
 objectClass: posixGroup
 cn: ${groups[$j]}
 gidNumber: ${gids[$j]}
-EOL
+
+EOL2
 done
 
-for (( j=0; j<${#users[@]}; j++ ))
-do
-cat << EOL >> /etc/openldap/users.ldif
-dn: uid=${users[$j]},ou=users,$BASE
+# USUARIS
+for (( j=0; j<${#users[@]}; j++ )); do
+cat >> /etc/openldap/users.ldif << EOL3
+dn: uid=${users[$j]},ou=users,${BASE}
 objectClass: inetOrgPerson
 objectClass: posixAccount
 objectClass: shadowAccount
@@ -233,9 +240,11 @@ uidNumber: ${uids[$j]}
 gidNumber: ${uids[$j]}
 homeDirectory: /home/${users[$j]}
 loginShell: /bin/bash
-userPassword: $HASH
-EOL
+userPassword: {SSHA512}CBVaUdQC9mVvAi+0O92J3hA+aPdiWUqf4lVr6bGRAUsFJX5aFOEb+1pSsY8PQwW1UKuuCGO2+160HotnfjXIaRKlryVekLnu
+
+EOL3
 done
+'
 
 # cargamos la configuracion en la base de datos
 ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/users.ldif
@@ -287,3 +296,5 @@ systemctl enable --now httpd
 # descargamos y descomprimimos LAM
 wget https://github.com/LDAPAccountManager/lam/releases/download/9.0.RC1/ldap-account-manager-9.0.RC1-0.fedora.1.noarch.rpm
 dnf install -y ldap-account-manager-9.0.RC1-0.fedora.1.noarch.rpm
+
+# configuramos LAM
