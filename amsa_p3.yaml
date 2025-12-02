@@ -112,12 +112,3 @@ Resources:
       Tags:
         - Key: Name
           Value: OpenLDAP-AMSA-Client-AutoCreated
-
-
-############################################################
-# OUTPUTS
-############################################################
-Outputs:
-  LDAPServerPublicDNS:
-    Description: DNS publico del servidor LDAP
-    Value: !GetAtt OpenLDAPAMSAServer.PublicDnsName
