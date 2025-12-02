@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # variables
 LDAP_SERVER=$1
 BASE="dc=amsa,dc=udl,dc=cat"

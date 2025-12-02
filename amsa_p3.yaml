@@ -78,11 +78,6 @@ Resources:
           cd /etc/pki/tls
           nohup python3 -m http.server 8080 &
 
-      Outputs:
-        LDAPServerPublicDNS:
-          Description: DNS publico
-          Value: !GetAtt OpenLDAPAMSAServer.PublicDnsName
-
       Tags:
         - Key: Name
           Value: OpenLDAP-AMSA-Server-AutoCreated
@@ -117,3 +112,12 @@ Resources:
       Tags:
         - Key: Name
           Value: OpenLDAP-AMSA-Client-AutoCreated
+
+
+############################################################
+# OUTPUTS
+############################################################
+Outputs:
+  LDAPServerPublicDNS:
+    Description: DNS publico del servidor LDAP
+    Value: !GetAtt OpenLDAPAMSAServer.PublicDnsName
