@@ -194,9 +194,14 @@ EOL
 ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/basedn.ldif
 
 # creacion de usuario OSProxy
-#cat << EOL >> /etc/openldap/users.ldif
-sudo bash -c '
-BASE="dc=amsa,dc=udl,dc=cat"
+cat << EOL >> /etc/openldap/users.ldif
+dn: cn=osproxy,ou=system,$BASE
+objectClass: organizationalRole
+objectClass: simpleSecurityObject
+cn: osproxy
+userPassword: $HASH
+description: OS proxy for resolving UIDs/GIDs
+EOL
 
 groups=("programadors" "dissenyadors")
 gids=("4000" "5000")
@@ -204,32 +209,20 @@ users=("ramon" "manel")
 sns=("mateo" "lopez")
 uids=("4001" "5001")
 
-# Crear fitxer LDIF
-cat > /etc/openldap/users.ldif << EOL1
-dn: cn=osproxy,ou=system,${BASE}
-objectClass: organizationalRole
-objectClass: simpleSecurityObject
-cn: osproxy
-userPassword: {SSHA512}CBVaUdQC9mVvAi+0O92J3hA+aPdiWUqf4lVr6bGRAUsFJX5aFOEb+1pSsY8PQwW1UKuuCGO2+160HotnfjXIaRKlryVekLnu
-description: OS proxy for resolving UIDs/GIDs
-
-EOL1
-
-# GRUPS
-for (( j=0; j<${#groups[@]}; j++ )); do
-cat >> /etc/openldap/users.ldif << EOL2
-dn: cn=${groups[$j]},ou=groups,${BASE}
+for (( j=0; j<${#groups[@]}; j++ ))
+do
+cat << EOL >> /etc/openldap/users.ldif
+dn: cn=${groups[$j]},ou=groups,$BASE
 objectClass: posixGroup
 cn: ${groups[$j]}
 gidNumber: ${gids[$j]}
-
-EOL2
+EOL
 done
 
-# USUARIS
-for (( j=0; j<${#users[@]}; j++ )); do
-cat >> /etc/openldap/users.ldif << EOL3
-dn: uid=${users[$j]},ou=users,${BASE}
+for (( j=0; j<${#users[@]}; j++ ))
+do
+cat << EOL >> /etc/openldap/users.ldif
+dn: uid=${users[$j]},ou=users,$BASE
 objectClass: inetOrgPerson
 objectClass: posixAccount
 objectClass: shadowAccount
@@ -240,11 +233,9 @@ uidNumber: ${uids[$j]}
 gidNumber: ${uids[$j]}
 homeDirectory: /home/${users[$j]}
 loginShell: /bin/bash
-userPassword: {SSHA512}CBVaUdQC9mVvAi+0O92J3hA+aPdiWUqf4lVr6bGRAUsFJX5aFOEb+1pSsY8PQwW1UKuuCGO2+160HotnfjXIaRKlryVekLnu
-
-EOL3
+userPassword: $HASH
+EOL
 done
-'
 
 # cargamos la configuracion en la base de datos
 ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/users.ldif
@@ -298,3 +289,178 @@ wget https://github.com/LDAPAccountManager/lam/releases/download/9.0.RC1/ldap-ac
 dnf install -y ldap-account-manager-9.0.RC1-0.fedora.1.noarch.rpm
 
 # configuramos LAM
+rm /var/lib/ldap-account-manager/config/config.cfg
+cat << EOL >> /var/lib/ldap-account-manager/config/config.cfg
+{
+    "password": "{CRYPT-SHA512}$6$rsgKmrlAp8i9Yz8m$kkaxMk7FT4CO4j7nj3u7ThAoSN9VbRE36TwErLZsAawz6ocviCYecI9dcuZyY.MbcGOf9gR0QWJA2qOkP5YV\/. cnNnS21ybEFwOGk5WXo4bQ==",
+    "default": "lam",
+    "sessionTimeout": "30",
+    "hideLoginErrorDetails": "false",
+    "logLevel": "4",
+    "logDestination": "SYSLOG",
+    "allowedHosts": "",
+    "passwordMinLength": "10",
+    "passwordMinUpper": "0",
+    "passwordMinLower": "0",
+    "passwordMinNumeric": "0",
+    "passwordMinClasses": "0",
+    "passwordMinSymbol": "0",
+    "checkedRulesCount": "-1",
+    "passwordMustNotContainUser": "false",
+    "passwordMustNotContain3Chars": "false",
+    "externalPwdCheckUrl": "",
+    "errorReporting": "default",
+    "allowedHostsSelfService": "",
+    "license": "",
+    "licenseEmailFrom": "",
+    "licenseEmailTo": "",
+    "licenseWarningType": "all",
+    "licenseEmailDateSent": "",
+    "mailServer": "",
+    "mailUser": "",
+    "mailPassword": "",
+    "mailEncryption": "TLS",
+    "mailAttribute": "mail",
+    "mailBackupAttribute": "passwordselfresetbackupmail",
+    "configDatabaseType": "files",
+    "configDatabaseServer": "",
+    "configDatabasePort": "",
+    "configDatabaseName": "",
+    "configDatabaseUser": "",
+    "configDatabasePassword": "",
+    "moduleSettings": "eyJyZXF1ZXN0QWNjZXNzIjp7Imhpc3RvcnlSZXRlbnRpb25QZXJpb2QiOiIzNjUwIiwiZXhwaXJhdGlvblBlcmlvZCI6IjMwIn19"
+}
+EOL
+
+rm /var/lib/ldap-account-manager/config/lam.conf
+cat << EOL >> /var/lib/ldap-account-manager/config/lam.conf
+{
+    "ServerURL": "ldap:\/\/localhost:389",
+    "useTLS": "no",
+    "followReferrals": "false",
+    "pagedResults": "false",
+    "Passwd": "{CRYPT-SHA512}$6$AwmbN3Cf.UCisUwB$lKScmMUGuEnBd3pQj83enFGSpMcPMZsghiF2IGR9noaYYjgfuhGDFC7NeJxppDSvIiIjs23wehB.Z6TBaP7zN1 QXdtYk4zQ2YuVUNpc1V3Qg==",
+    "Admins": "cn=osproxy,ou=system,dc=amsa,dc=udl,dc=cat",
+    "defaultLanguage": "en_GB.utf8",
+    "scriptPath": "",
+    "scriptServer": "",
+    "scriptRights": "750",
+    "serverDisplayName": "",
+    "activeTypes": "user,group",
+    "accessLevel": "100",
+    "loginMethod": "list",
+    "loginSearchSuffix": "dc=yourdomain,dc=org",
+    "loginSearchFilter": "uid=%USER%",
+    "searchLimit": "0",
+    "lamProMailFrom": "noreply@example.com",
+    "lamProMailReplyTo": "",
+    "lamProMailSubject": "Your password was reset",
+    "lamProMailText": "Dear @@givenName@@ @@sn@@,+::++::+your password was reset to: @@newPassword@@+::++::++::+Best regards+::++::+deskside support+::+",        
+    "lamProMailIsHTML": "false",
+    "lamProMailAllowAlternateAddress": "true",
+    "httpAuthentication": "false",
+    "loginSearchDN": "",
+    "loginSearchPassword": "",
+    "timeZone": "Europe\/London",
+    "jobsBindUser": null,
+    "jobsBindPassword": null,
+    "jobsDatabase": null,
+    "jobsDBHost": null,
+    "jobsDBPort": null,
+    "jobsDBUser": null,
+    "jobsDBPassword": null,
+    "jobsDBName": null,
+    "pwdResetAllowSpecificPassword": "true",
+    "pwdResetAllowScreenPassword": "true",
+    "pwdResetForcePasswordChange": "true",
+    "pwdResetDefaultPasswordOutput": "2",
+    "scriptUserName": "",
+    "scriptSSHKey": "",
+    "scriptSSHKeyPassword": "",
+    "twoFactorAuthentication": "none",
+    "twoFactorAuthenticationURL": "https:\/\/localhost",
+    "twoFactorAuthenticationInsecure": false,
+    "twoFactorAuthenticationLabel": "",
+    "twoFactorAuthenticationOptional": false,
+    "twoFactorAuthenticationCaption": "",
+    "twoFactorAuthenticationClientId": "",
+    "twoFactorAuthenticationSecretKey": "",
+    "twoFactorAuthenticationDomain": "",
+    "twoFactorAuthenticationAttribute": "uid",
+    "twoFactorAllowToRememberDevice": "false",
+    "twoFactorRememberDeviceDuration": "28800",
+    "twoFactorRememberDevicePassword": "uZ0TJJUrHtUO6VcVFouw9zlk0zMRtV",
+    "referentialIntegrityOverlay": "false",
+    "hidePasswordPromptForExpiredPasswords": "false",
+    "hideDnPart": "",
+    "pwdPolicyMinLength": "",
+    "pwdPolicyMinLowercase": "",
+    "pwdPolicyMinUppercase": "",
+    "pwdPolicyMinNumeric": "",
+    "pwdPolicyMinSymbolic": "",
+    "typeSettings": {
+        "suffix_user": "ou=users,dc=amsa,dc=udl,dc=cat",
+        "attr_user": "#uid;#givenName;#sn;#uidNumber;#gidNumber",
+        "modules_user": "inetOrgPerson,posixAccount,shadowAccount",
+        "suffix_group": "ou=groups,dc=amsa,dc=udl,dc=cat",
+        "attr_group": "#cn;#gidNumber;#memberUID;#description",
+        "modules_group": "posixGroup",
+        "customLabel_user": "",
+        "filter_user": "",
+        "customLabel_group": "",
+        "filter_group": "",
+        "hidden_user": false,
+        "hidden_group": false
+    },
+    "moduleSettings": {
+        "posixAccount_user_minUID": [
+            "10000"
+        ],
+        "posixAccount_user_maxUID": [
+            "30000"
+        ],
+        "posixAccount_host_minMachine": [
+            "50000"
+        ],
+        "posixAccount_host_maxMachine": [
+            "60000"
+        ],
+        "posixGroup_group_minGID": [
+            "10000"
+        ],
+        "posixGroup_group_maxGID": [
+            "20000"
+        ],
+        "posixAccount_user_uidGeneratorUsers": [
+            "range"
+        ],
+        "posixAccount_host_uidGeneratorUsers": [
+            "range"
+        ],
+        "posixAccount_group_gidGeneratorUsers": [
+            "range"
+        ],
+        "posixGroup_pwdHash": [
+            "SSHA"
+        ],
+        "posixAccount_pwdHash": [
+            "SSHA"
+        ]
+    },
+    "toolSettings": {
+        "treeViewSuffix": "dc=amsa,dc=udl,dc=cat",
+        "tool_hide_toolFileUpload": "false",
+        "tool_hide_ImportExport": "false",
+        "tool_hide_toolMultiEdit": "false",
+        "tool_hide_toolOUEditor": "false",
+        "tool_hide_toolPDFEditor": "false",
+        "tool_hide_toolProfileEditor": "false",
+        "tool_hide_toolSchemaBrowser": "false",
+        "tool_hide_toolServerInformation": "false",
+        "tool_hide_toolTests": "false",
+        "tool_hide_TreeViewTool": "false",
+        "tool_hide_toolWebauthn": "false"
+    },
+    "jobSettings": []
+}
+EOL
