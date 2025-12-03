@@ -132,6 +132,7 @@ systemctl daemon-reload
 systemctl enable --now slapd
 
 # configuracion en la estructura de la base de datos un usuario admin
+BASE="dc=amsa,dc=udl,dc=cat"
 sudo bash -c "cat << EOL > /etc/openldap/rootdn.ldif
 dn: olcDatabase=mdb,cn=config
 objectClass: olcDatabaseConfig
@@ -169,6 +170,8 @@ chmod 640 /etc/openldap/rootdn.ldif
 sudo ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/rootdn.ldif
 
 # creamos la configuracion para usuarios y grupos
+BASE="dc=amsa,dc=udl,dc=cat"
+DC="amsa"
 sudo bash -c "cat << EOL >> basedn.ldif
 dn: $BASE
 objectClass: dcObject
