@@ -289,10 +289,9 @@ wget https://github.com/LDAPAccountManager/lam/releases/download/9.0.RC1/ldap-ac
 dnf install -y ldap-account-manager-9.0.RC1-0.fedora.1.noarch.rpm
 
 # configuramos LAM
-rm /var/lib/ldap-account-manager/config/config.cfg
-cat << EOL >> /var/lib/ldap-account-manager/config/config.cfg
+cat << EOL > /var/lib/ldap-account-manager/config/config.cfg
 {
-    "password": "{CRYPT-SHA512}$6$rsgKmrlAp8i9Yz8m$kkaxMk7FT4CO4j7nj3u7ThAoSN9VbRE36TwErLZsAawz6ocviCYecI9dcuZyY.MbcGOf9gR0QWJA2qOkP5YV\/. cnNnS21ybEFwOGk5WXo4bQ==",
+    "password": "{CRYPT-SHA512}$6$rsgKmrlAp8i9Yz8m$kkaxMk7FT4CO4j7nj3u7ThAoSN9VbRE36TwErLZsAawz6ocviCYecI9dcuZyY.MbcGOf9gR0QWJA2qOkP5YV\/.cnNnS21ybEFwOGk5WXo4bQ==",
     "default": "lam",
     "sessionTimeout": "30",
     "hideLoginErrorDetails": "false",
@@ -332,14 +331,13 @@ cat << EOL >> /var/lib/ldap-account-manager/config/config.cfg
 }
 EOL
 
-rm /var/lib/ldap-account-manager/config/lam.conf
-cat << EOL >> /var/lib/ldap-account-manager/config/lam.conf
+cat << EOL > /var/lib/ldap-account-manager/config/lam.conf
 {
     "ServerURL": "ldap:\/\/localhost:389",
     "useTLS": "no",
     "followReferrals": "false",
     "pagedResults": "false",
-    "Passwd": "{CRYPT-SHA512}$6$AwmbN3Cf.UCisUwB$lKScmMUGuEnBd3pQj83enFGSpMcPMZsghiF2IGR9noaYYjgfuhGDFC7NeJxppDSvIiIjs23wehB.Z6TBaP7zN1 QXdtYk4zQ2YuVUNpc1V3Qg==",
+    "Passwd": "{CRYPT-SHA512}$6$AwmbN3Cf.UCisUwB$lKScmMUGuEnBd3pQj83enFGSpMcPMZsghiF2IGR9noaYYjgfuhGDFC7NeJxppDSvIiIjs23wehB.Z6TBaP7zN1QXdtYk4zQ2YuVUNpc1V3Qg==",
     "Admins": "cn=osproxy,ou=system,dc=amsa,dc=udl,dc=cat",
     "defaultLanguage": "en_GB.utf8",
     "scriptPath": "",
