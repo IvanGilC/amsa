@@ -44,7 +44,7 @@ useradd -r -M -d /var/lib/openldap -u 55 -g 55 -s /usr/sbin/nologin ldap
 mkdir /var/lib/openldap
 mkdir /etc/openldap/slapd.d
 chown -R ldap:ldap /var/lib/openldap
-chown ldap:ldap /etc/openldap/slapd.conf
+chown root:ldap /etc/openldap/slapd.conf
 chmod 640 /etc/openldap/slapd.conf
 
 # fichero de configuracion de LDAP
@@ -132,7 +132,6 @@ systemctl daemon-reload
 systemctl enable --now slapd
 
 # configuracion en la estructura de la base de datos un usuario admin
-BASE="dc=amsa,dc=udl,dc=cat"
 sudo bash -c "cat << EOL > /etc/openldap/rootdn.ldif
 dn: olcDatabase=mdb,cn=config
 objectClass: olcDatabaseConfig
@@ -170,8 +169,6 @@ chmod 640 /etc/openldap/rootdn.ldif
 sudo ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/rootdn.ldif
 
 # creamos la configuracion para usuarios y grupos
-BASE="dc=amsa,dc=udl,dc=cat"
-DC="amsa"
 sudo bash -c "cat << EOL >> basedn.ldif
 dn: $BASE
 objectClass: dcObject
@@ -296,8 +293,8 @@ replace: olcTLSCertificateFile
 olcTLSCertificateFile: "$PATH_PKI/ldapcert.pem"
 EOF"
 
-chown ldap:ldap /etc/openldap/add-tls.ldif
-chmod 640 /etc/openldap/add-tls.ldif
+chown ldap:ldap "$PATH_PKI/cacerts.pem"
+chmod 640 "$PATH_PKI/cacerts.pem"
 
 # cargamos la configuracion
 sudo ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/add-tls.ldif
