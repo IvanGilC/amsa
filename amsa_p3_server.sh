@@ -15,7 +15,7 @@ dnf install \
 
 # descargamos e instalamos el paquete OpenLDAP con las configuraciones necesarias
 cd /tmp
-cat << EOL >> install-ldap.sh
+cat << EOL > install-ldap.sh
 #!/bin/bash
 wget ftp://ftp.openldap.org/pub/OpenLDAP/openldap-release/openldap-$VER.tgz
 tar xzf openldap-$VER.tgz
@@ -48,7 +48,7 @@ chown root:ldap /etc/openldap/slapd.conf
 chmod 640 /etc/openldap/slapd.conf
 
 # fichero de configuracion de LDAP
-sudo bash -c "cat > /etc/systemd/system/slapd.service << 'EOL'
+cat <<EOL > /etc/systemd/system/slapd.service
 [Unit]
 Description=OpenLDAP Server Daemon
 After=syslog.target network-online.target
@@ -64,7 +64,7 @@ ExecStart=/usr/libexec/slapd -u ldap -g ldap -h \${SLAPD_URLS} \$SLAPD_OPTIONS
 
 [Install]
 WantedBy=multi-user.target
-EOL"
+EOL
 
 mv /etc/openldap/slapd.ldif /etc/openldap/slapd.ldif.default
 
@@ -73,7 +73,7 @@ HASH=$(slappasswd -h "{SSHA512}" -s $PASSWORD -o module-load=pw-sha2.la -o modul
 
 # CREACION DE BASE DE DATOS
 # creamos un fichero de configuracion
-cat << EOL >> /etc/openldap/slapd.ldif
+cat << EOL > /etc/openldap/slapd.ldif
 dn: cn=config
 objectClass: olcGlobal
 cn: config
@@ -132,7 +132,7 @@ systemctl daemon-reload
 systemctl enable --now slapd
 
 # configuracion en la estructura de la base de datos un usuario admin
-cat << EOL >> /etc/openldap/rootdn.ldif
+cat << EOL > /etc/openldap/rootdn.ldif
 dn: olcDatabase=mdb,cn=config
 objectClass: olcDatabaseConfig
 objectClass: olcMdbConfig
@@ -166,7 +166,7 @@ EOL
 ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/rootdn.ldif
 
 # creamos la configuracion para usuarios y grupos
-cat << EOL >> /etc/openldap/basedn.ldif
+cat << EOL > /etc/openldap/basedn.ldif
 dn: $BASE
 objectClass: dcObject
 objectClass: organization
@@ -194,7 +194,7 @@ EOL
 ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/basedn.ldif
 
 # creacion de usuario OSProxy
-cat << EOL >> /etc/openldap/users.ldif
+cat << EOL > /etc/openldap/users.ldif
 dn: cn=osproxy,ou=system,$BASE
 objectClass: organizationalRole
 objectClass: simpleSecurityObject
@@ -260,7 +260,7 @@ chmod 400 "$PATH_PKI/ldapkey.pem"
 cp "$PATH_PKI/ldapcert.pem" "$PATH_PKI/cacerts.pem"
 
 # creamos el fichero add-tls
-cat << EOL >> /etc/openldap/add-tls.ldif
+cat << EOL > /etc/openldap/add-tls.ldif
 dn: cn=config
 changetype: modify
 add: olcTLSCACertificateFile
