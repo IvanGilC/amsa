@@ -48,7 +48,7 @@ chown root:ldap /etc/openldap/slapd.conf
 chmod 640 /etc/openldap/slapd.conf
 
 # fichero de configuracion de LDAP
-cat << EOL >> /etc/systemd/system/slapd.service
+sudo bash -c "cat > /etc/systemd/system/slapd.service << 'EOL'
 [Unit]
 Description=OpenLDAP Server Daemon
 After=syslog.target network-online.target
@@ -64,22 +64,20 @@ ExecStart=/usr/libexec/slapd -u ldap -g ldap -h \${SLAPD_URLS} \$SLAPD_OPTIONS
 
 [Install]
 WantedBy=multi-user.target
-EOL
-
-mv /etc/openldap/slapd.ldif /etc/openldap/slapd.ldif.default
+EOL"
 
 # generacion de contrasenas con SHA-512
 HASH=$(slappasswd -h "{SSHA512}" -s $PASSWORD -o module-load=pw-sha2.la -o module-path=/usr/local/libexec/openldap)
 
 # CREACION DE BASE DE DATOS
 # creamos un fichero de configuracion
-cat << EOL >> /etc/openldap/slapd.ldif
+sudo bash -c "cat > /etc/openldap/slapd.ldif << 'EOL'
 dn: cn=config
 objectClass: olcGlobal
 cn: config
 olcArgsFile: /var/lib/openldap/slapd.args
 olcPidFile: /var/lib/openldap/slapd.pid
-olcTLSCipherSuite: TLSv1.2:HIGH:!aNULL:!eNULL
+olcTLSCipherSuite: TLSv1.2:HIGH:\!aNULL:\!eNULL
 olcTLSProtocolMin: 3.3
 
 dn: cn=schema,cn=config
@@ -107,10 +105,10 @@ dn: olcDatabase=frontend,cn=config
 objectClass: olcDatabaseConfig
 objectClass: olcFrontendConfig
 olcDatabase: frontend
-olcPasswordHash: $HASH
-olcAccess: to dn.base="cn=Subschema" by * read
+olcPasswordHash: {SSHA512}CBVaUdQC9mVvAi+0O92J3hA+aPdiWUqf4lVr6bGRAUsFJX5aFOEb+1pSsY8PQwW1UKuuCGO2+160HotnfjXIaRKlryVekLnu
+olcAccess: to dn.base=\"cn=Subschema\" by * read
 olcAccess: to *
-  by dn.base="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" manage
+  by dn.base=\"gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth\" manage
   by * none
 
 dn: olcDatabase=config,cn=config
@@ -118,9 +116,9 @@ objectClass: olcDatabaseConfig
 olcDatabase: config
 olcRootDN: cn=config
 olcAccess: to *
-  by dn.base="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" manage
+  by dn.base=\"gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth\" manage
   by * none
-EOL
+EOL"
 
 # cargamos la configuracion a la base de datos
 cd /etc/openldap/
@@ -132,7 +130,9 @@ systemctl daemon-reload
 systemctl enable --now slapd
 
 # configuracion en la estructura de la base de datos un usuario admin
-cat << EOL >> /etc/openldap/rootdn.ldif
+
+BASE="dc=amsa,dc=udl,dc=cat"
+sudo bash -c "cat << EOL > /etc/openldap/rootdn.ldif
 dn: olcDatabase=mdb,cn=config
 objectClass: olcDatabaseConfig
 objectClass: olcMdbConfig
@@ -141,7 +141,7 @@ olcDbMaxSize: 42949672960
 olcDbDirectory: /var/lib/openldap
 olcSuffix: $BASE
 olcRootDN: cn=admin,$BASE
-olcRootPW: $HASH
+olcRootPW: {SSHA512}CBVaUdQC9mVvAi+0O92J3hA+aPdiWUqf4lVr6bGRAUsFJX5aFOEb+1pSsY8PQwW1UKuuCGO2+160HotnfjXIaRKlryVekLnu
 olcDbIndex: uid pres,eq
 olcDbIndex: cn,sn pres,eq,approx,sub
 olcDbIndex: mail pres,eq,sub
@@ -150,23 +150,26 @@ olcDbIndex: loginShell pres,eq
 olcAccess: to attrs=userPassword,shadowLastChange,shadowExpire
   by self write
   by anonymous auth
-  by dn.subtree="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" manage
-  by dn.subtree="ou=system,$BASE" read
+  by dn.subtree=\"gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth\" manage
+  by dn.subtree=\"ou=system,$BASE\" read
   by * none
-olcAccess: to dn.subtree="ou=system,$BASE"
-  by dn.subtree="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" manage
+olcAccess: to dn.subtree=\"ou=system $BASE\"
+  by dn.subtree=\"gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth\" manage
   by * none
-olcAccess: to dn.subtree="$BASE"
-  by dn.subtree="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" manage
+olcAccess: to dn.subtree=\"$BASE\"
+  by dn.subtree=\"gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth\" manage
   by users read
   by * none
-EOL
+EOL"
 
 # cargamos la configuracion en la base de datos
-ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/rootdn.ldif
+sudo ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/rootdn.ldif
 
 # creamos la configuracion para usuarios y grupos
-cat << EOL >> /etc/openldap/basedn.ldif
+BASE="dc=amsa,dc=udl,dc=cat"
+DC="amsa"
+
+sudo bash -c "cat << EOL >> basedn.ldif
 dn: $BASE
 objectClass: dcObject
 objectClass: organization
@@ -188,10 +191,10 @@ dn: ou=system,$BASE
 objectClass: organizationalUnit
 objectClass: top
 ou: system
-EOL
+EOL"
 
 # cargamos la configuracion en la base de datos
-ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/basedn.ldif
+sudo ldapadd -Y EXTERNAL -H ldapi:/// -f basedn.ldif
 
 # creacion de usuario OSProxy
 sudo bash -c '
@@ -246,7 +249,7 @@ done
 '
 
 # cargamos la configuracion en la base de datos
-ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/users.ldif
+sudo ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/users.ldif
 
 # configuramos los certificados tls
 commonname=$HOSTNAME
@@ -268,7 +271,7 @@ chmod 400 "$PATH_PKI/ldapkey.pem"
 cp "$PATH_PKI/ldapcert.pem" "$PATH_PKI/cacerts.pem"
 
 # creamos el fichero add-tls
-cat << EOL >> /etc/openldap/add-tls.ldif
+sudo bash -c " cat << EOF > /etc/openldap/add-tls.ldif
 dn: cn=config
 changetype: modify
 add: olcTLSCACertificateFile
@@ -279,21 +282,10 @@ olcTLSCertificateKeyFile: "$PATH_PKI/ldapkey.pem"
 -
 add: olcTLSCertificateFile
 olcTLSCertificateFile: "$PATH_PKI/ldapcert.pem"
-EOL
+EOF"
 
 # cargamos la configuracion
 sudo ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/add-tls.ldif
 
 # reiniciamos el servicio LDAP
-systemctl restart slapd
-
-# INSTALAMOS CLIENTE WEB DE LDAP
-# instalamos dependencias de LAM
-dnf install -y httpd php php-ldap php-mbstring php-gd php-gmp php-zip
-systemctl enable --now httpd
-
-# descargamos y descomprimimos LAM
-wget https://github.com/LDAPAccountManager/lam/releases/download/9.0.RC1/ldap-account-manager-9.0.RC1-0.fedora.1.noarch.rpm
-dnf install -y ldap-account-manager-9.0.RC1-0.fedora.1.noarch.rpm
-
-# configuramos LAM
+sudo systemctl restart slapd
