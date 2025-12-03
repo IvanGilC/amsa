@@ -289,3 +289,12 @@ sudo ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/add-tls.ldif
 
 # reiniciamos el servicio LDAP
 sudo systemctl restart slapd
+
+# INSTALAMOS CLIENTE WEB DE LDAP
+# instalamos dependencias de LAM
+dnf install -y httpd php php-ldap php-mbstring php-gd php-gmp php-zip
+systemctl enable --now httpd
+
+# descargamos y descomprimimos LAM
+wget https://github.com/LDAPAccountManager/lam/releases/download/9.0.RC1/ldap-account-manager-9.0.RC1-0.fedora.1.noarch.rpm
+dnf install -y ldap-account-manager-9.0.RC1-0.fedora.1.noarch.rpm

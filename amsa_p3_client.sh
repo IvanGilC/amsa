@@ -10,18 +10,17 @@ dnf install -y openldap-clients sssd sssd-tools authselect oddjob-mkhomedir
 
 # descargamos archivo cacerts del server y le damos permisos
 curl -f http://$LDAP_SERVER:8080/cacerts.pem -o $PATH_PKI/cacerts.crt
-chmod 644 /etc/pki/tls/cacert.crt
+sudo chmod 644 $PATH_PKI/cacerts.crt
 
 # configurar ldap
-cat << EOF >> /etc/openldap/ldap.conf
-BASE dc=amsa,dc=udl,dc=cat
+sudo bash -c "cat > /etc/openldap/ldap.conf << EOF
 URI ldaps://$LDAP_SERVER
-TLS_CACERT /etc/pki/tls/cacert.crt
-EOF
+TLS_CACERT $PATH_PKI/cacerts.crt
+EOF"
 
 
 # configurar sssd
-cat << EOL >> /etc/sssd/sssd.conf
+sudo bash -c "cat > /etc/sssd/sssd.conf << EOF
 [sssd]
 services = nss, pam, sudo
 config_file_version = 2
@@ -56,7 +55,7 @@ ldap_search_timeout = 50
 ldap_network_timeout = 60
 
 ldap_access_filter = (objectClass=posixAccount)
-EOL
+EOL"
 
 # asignamos permisos al sssd
 chmod 600 /etc/sssd/sssd.conf
