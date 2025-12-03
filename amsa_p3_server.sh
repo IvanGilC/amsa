@@ -123,7 +123,7 @@ EOL"
 # cargamos la configuracion a la base de datos
 cd /etc/openldap/
 slapadd -n 0 -F /etc/openldap/slapd.d -l /etc/openldap/slapd.ldif
-#chown -R ldap:ldap /etc/openldap/slapd.d
+chown -R ldap:ldap /etc/openldap/slapd.d
 chown ldap:ldap /etc/openldap/slapd.ldif
 chmod 640 /etc/openldap/slapd.ldif
 
