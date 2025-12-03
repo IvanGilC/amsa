@@ -48,14 +48,14 @@ ldap_default_bind_dn = cn=osproxy,ou=system,$BASE
 ldap_default_authtok = 1234
 
 ldap_tls_reqcert = demand
-ldap_tls_cacert = $PATH_PKI/cacert.crt
+ldap_tls_cacert = $PATH_PKI/cacerts.crt
 
 ldap_id_use_start_tls = True
 ldap_search_timeout = 50
 ldap_network_timeout = 60
 
 ldap_access_filter = (objectClass=posixAccount)
-EOL"
+EOF"
 
 # asignamos permisos al sssd
 chmod 600 /etc/sssd/sssd.conf
