@@ -124,8 +124,6 @@ EOL"
 cd /etc/openldap/
 slapadd -n 0 -F /etc/openldap/slapd.d -l /etc/openldap/slapd.ldif
 chown -R ldap:ldap /etc/openldap/slapd.d
-chown ldap:ldap /etc/openldap/slapd.ldif
-chmod 640 /etc/openldap/slapd.ldif
 
 # iniciamos el servicio
 systemctl daemon-reload
@@ -162,9 +160,6 @@ olcAccess: to dn.subtree=\"$BASE\"
   by * none
 EOL"
 
-chown ldap:ldap /etc/openldap/rootdn.ldif
-chmod 640 /etc/openldap/rootdn.ldif
-
 # cargamos la configuracion en la base de datos
 sudo ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/rootdn.ldif
 
@@ -192,9 +187,6 @@ objectClass: organizationalUnit
 objectClass: top
 ou: system
 EOL"
-
-chown ldap:ldap /etc/openldap/basedn.ldif
-chmod 640 /etc/openldap/basedn.ldif
 
 # cargamos la configuracion en la base de datos
 sudo ldapadd -Y EXTERNAL -H ldapi:/// -f basedn.ldif
@@ -251,9 +243,6 @@ EOL3
 done
 '
 
-chown ldap:ldap /etc/openldap/users.ldif
-chmod 640 /etc/openldap/users.ldif
-
 # cargamos la configuracion en la base de datos
 sudo ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/users.ldif
 
@@ -274,17 +263,14 @@ openssl req -days 500 -newkey rsa:4096 \
 # otorgamos los permisos necessarios
 sudo chown ldap:ldap "$PATH_PKI/ldapkey.pem"
 sudo chmod 400 "$PATH_PKI/ldapkey.pem"
-sudo cp "$PATH_PKI/ldapcert.pem" "$PATH_PKI/cacerts.pem"
-
-chown ldap:ldap "$PATH_PKI/cacerts.pem"
-chmod 640 "$PATH_PKI/cacerts.pem"
+sudo cp "$PATH_PKI/ldapcert.pem" "$PATH_PKI/cacert.pem"
 
 # creamos el fichero add-tls
 sudo bash -c " cat << EOF > /etc/openldap/add-tls.ldif
 dn: cn=config
 changetype: modify
 replace: olcTLSCACertificateFile
-olcTLSCACertificateFile: "$PATH_PKI/cacerts.pem"
+olcTLSCACertificateFile: "$PATH_PKI/cacert.pem"
 -
 replace: olcTLSCertificateKeyFile
 olcTLSCertificateKeyFile: "$PATH_PKI/ldapkey.pem"
@@ -293,8 +279,8 @@ replace: olcTLSCertificateFile
 olcTLSCertificateFile: "$PATH_PKI/ldapcert.pem"
 EOF"
 
-chown ldap:ldap "$PATH_PKI/cacerts.pem"
-chmod 640 "$PATH_PKI/cacerts.pem"
+chown ldap:ldap "$PATH_PKI/cacert.pem"
+chmod 640 "$PATH_PKI/cacert.pem"
 
 # cargamos la configuracion
 sudo ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/add-tls.ldif

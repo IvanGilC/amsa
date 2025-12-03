@@ -8,14 +8,14 @@ PATH_PKI="/etc/pki/tls"
 # instalamos herramientas necessarias
 dnf install -y openldap-clients sssd sssd-tools authselect oddjob-mkhomedir
 
-# descargamos archivo cacerts del server y le damos permisos
-curl -f http://$LDAP_SERVER:8080/cacerts.pem -o $PATH_PKI/cacerts.crt
-sudo chmod 644 $PATH_PKI/cacerts.crt
+# descargamos archivo cacert del server y le damos permisos
+curl -f http://$LDAP_SERVER:8080/cacert.pem -o $PATH_PKI/cacert.crt
+sudo chmod 644 $PATH_PKI/cacert.crt
 
 # configurar ldap
 sudo bash -c "cat > /etc/openldap/ldap.conf << EOF
 URI ldaps://$LDAP_SERVER
-TLS_CACERT $PATH_PKI/cacerts.crt
+TLS_CACERT $PATH_PKI/cacert.crt
 EOF"
 
 
@@ -48,7 +48,7 @@ ldap_default_bind_dn = cn=osproxy,ou=system,$BASE
 ldap_default_authtok = 1234
 
 ldap_tls_reqcert = demand
-ldap_tls_cacert = $PATH_PKI/cacerts.crt
+ldap_tls_cacert = $PATH_PKI/cacert.crt
 
 ldap_id_use_start_tls = True
 ldap_search_timeout = 50
