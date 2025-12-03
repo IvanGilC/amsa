@@ -77,7 +77,7 @@ objectClass: olcGlobal
 cn: config
 olcArgsFile: /var/lib/openldap/slapd.args
 olcPidFile: /var/lib/openldap/slapd.pid
-olcTLSCipherSuite: TLSv1.2:HIGH:\!aNULL:\!eNULL
+olcTLSCipherSuite: TLSv1.2:HIGH:!aNULL:!eNULL
 olcTLSProtocolMin: 3.3
 
 dn: cn=schema,cn=config
