@@ -82,7 +82,7 @@ Resources:
           cd /etc/pki/tls
           nohup python3 -m http.server 8080 &
 
-          # Señalar a CloudFormation que el servidor está listo
+          # Señalar a CloudFormation que el servidor esta listo
           /opt/aws/bin/cfn-signal --success true --stack ${AWS::StackName} --resource OpenLDAPAMSAServer --region ${AWS::Region}
 
       Tags:
