@@ -266,21 +266,21 @@ openssl req -days 500 -newkey rsa:4096 \
     -subj "/C=$country/ST=$state/L=$locality/O=$organization/OU=$organizationalunit/CN=$commonname/emailAddress=$email"
 
 # otorgamos los permisos necessarios
-chown ldap:ldap "$PATH_PKI/ldapkey.pem"
-chmod 400 "$PATH_PKI/ldapkey.pem"
-cp "$PATH_PKI/ldapcert.pem" "$PATH_PKI/cacerts.pem"
+sudo chown ldap:ldap "$PATH_PKI/ldapkey.pem"
+sudo chmod 400 "$PATH_PKI/ldapkey.pem"
+sudo cp "$PATH_PKI/ldapcert.pem" "$PATH_PKI/cacerts.pem"
 
 # creamos el fichero add-tls
 sudo bash -c " cat << EOF > /etc/openldap/add-tls.ldif
 dn: cn=config
 changetype: modify
-add: olcTLSCACertificateFile
+replace: olcTLSCACertificateFile
 olcTLSCACertificateFile: "$PATH_PKI/cacerts.pem"
 -
-add: olcTLSCertificateKeyFile
+replace: olcTLSCertificateKeyFile
 olcTLSCertificateKeyFile: "$PATH_PKI/ldapkey.pem"
 -
-add: olcTLSCertificateFile
+replace: olcTLSCertificateFile
 olcTLSCertificateFile: "$PATH_PKI/ldapcert.pem"
 EOF"
 
