@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # configuramos LAM
+rm /var/lib/ldap-account-manager/config/config.cfg
 sudo bash -c 'cat > /var/lib/ldap-account-manager/config/config.cfg << 'EOL'
 {
     "password": "{CRYPT-SHA512}$6$JzH6ag3fi52pFYnj$ZxOQdEr2FLkAMFjrB0cEyJeLc6K6XI0C2UcrXXVqbTL\/\/XobDfQ7KDoxOLMhTRc6NU3VXHD1CwVpoxq7VFbft. SnpINmFnM2ZpNTJwRlluag==",
@@ -43,6 +44,7 @@ sudo bash -c 'cat > /var/lib/ldap-account-manager/config/config.cfg << 'EOL'
 }
 EOL'
 
+rm /var/lib/ldap-account-manager/config/lam.conf
 sudo bash -c 'cat > /var/lib/ldap-account-manager/config/lam.conf << 'EOL'
 {
     "ServerURL": "ldap:\/\/localhost:389",

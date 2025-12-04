@@ -195,11 +195,11 @@ sudo ldapadd -Y EXTERNAL -H ldapi:/// -f basedn.ldif
 sudo bash -c '
 BASE="dc=amsa,dc=udl,dc=cat"
 
-groups=("programadors" "dissenyadors")
-gids=("4000" "5000")
-users=("ramon" "manel")
-sns=("mateo" "lopez")
-uids=("4001" "5001")
+groups=("alumne" "profesor" "admin")
+gids=("4000" "5000" "6000")
+users=("user1" "user2" "user3" "user4" "user5" "user6" "user7" "user8" "user9")
+sns=("alumno1" "alumno2" "alumno3" "alumno4" "alumno5" "alumno6" "profesor1" "profesor2" "administrador")
+uids=("4001" "4002" "4003" "4004" "4005" "4006" "5001" "5002" "6001")
 
 # Crear fitxer LDIF
 cat > /etc/openldap/users.ldif << EOL1
