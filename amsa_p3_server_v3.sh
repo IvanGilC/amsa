@@ -269,13 +269,13 @@ sudo cp "$PATH_PKI/ldapcert.pem" "$PATH_PKI/cacert.pem"
 sudo bash -c " cat << EOF > /etc/openldap/add-tls.ldif
 dn: cn=config
 changetype: modify
-replace: olcTLSCACertificateFile
+add: olcTLSCACertificateFile
 olcTLSCACertificateFile: "$PATH_PKI/cacert.pem"
 -
-replace: olcTLSCertificateKeyFile
+add: olcTLSCertificateKeyFile
 olcTLSCertificateKeyFile: "$PATH_PKI/ldapkey.pem"
 -
-replace: olcTLSCertificateFile
+add: olcTLSCertificateFile
 olcTLSCertificateFile: "$PATH_PKI/ldapcert.pem"
 EOF"
 
