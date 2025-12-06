@@ -92,11 +92,9 @@ Resources:
           yum update -y
           yum install -y git aws-cfn-bootstrap python3
 
-          git clone https://github.com/IvanGilC/amsa2.git /opt/amsa
+          git clone https://github.com/IvanGilC/amsa.git /opt/amsa
           cd /opt/amsa
 
-          #LDAPPassword=${LDAPPassword}
-          #bash amsa_p3_server_v2.sh $LDAPPassword
           bash amsa_p3_server_v3.sh
           bash amsa_p3_lam.sh
 
@@ -139,7 +137,7 @@ Resources:
             yum update -y
             yum install -y git
 
-            git clone https://github.com/IvanGilC/amsa2.git /opt/amsa
+            git clone https://github.com/IvanGilC/amsa.git /opt/amsa
             cd /opt/amsa
 
             LDAP_SERVER=${OpenLDAPAMSAServer.PublicDnsName}
