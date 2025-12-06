@@ -20,10 +20,10 @@ Para hacer el desplegamiento solo hay que subir el archivo amsa_p3_template.yaml
 ### LAM
 <img width="1904" height="475" alt="lam" src="https://github.com/user-attachments/assets/7b263b72-64e2-4e05-bf04-0b88da600e23" />
 
-### Usuario (alumno)
+### Usuario (profesor)
 <img width="743" height="296" alt="cliente2" src="https://github.com/user-attachments/assets/4922cf41-643c-4ddc-ab51-a5de255826db" />
 
-### Usuario (profesor)
+### Usuario (alumno)
 <img width="754" height="307" alt="cleinte1" src="https://github.com/user-attachments/assets/71eb226e-16a4-4ba2-88b4-452119519a8f" />
 
 *Las instancias usadas para hacer las pruebas han sido mantenidas en el Workspace de AWS del Alumono Ivan Gil Cañizares (igc15@alumnes.udl.cat)*
