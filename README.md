@@ -1,4 +1,4 @@
-# AMSA - Practica 3
+a# AMSA - Practica 3
 ## Grupo:
 - Marco Beruet Morelli
 - Ivan Gil Cañizares
@@ -26,4 +26,4 @@ Para hacer el desplegamiento solo hay que subir el archivo amsa_p3_template.yaml
 ### Usuario (alumno)
 <img width="754" height="307" alt="cleinte1" src="https://github.com/user-attachments/assets/71eb226e-16a4-4ba2-88b4-452119519a8f" />
 
-*Las instancias usadas para hacer las pruebas han sido mantenidas en el Workspace de AWS del Alumono Ivan Gil Cañizares (igc15@alumnes.udl.cat)*
+*Las instancias usadas para hacer las pruebas han sido mantenidas en el Workspace de AWS del alumno Ivan Gil Cañizares (igc15@alumnes.udl.cat)*
