@@ -1,4 +1,4 @@
-a# AMSA - Practica 3
+# AMSA - Practica 3
 ## Grupo:
 - Marco Beruet Morelli
 - Ivan Gil Cañizares
