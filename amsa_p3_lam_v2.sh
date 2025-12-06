@@ -1,57 +1,13 @@
 #!/bin/bash
 
 # configuramos LAM
-rm /var/lib/ldap-account-manager/config/config.cfg
-sudo bash -c 'cat > /var/lib/ldap-account-manager/config/config.cfg << 'EOL'
-{
-    "password": "{CRYPT-SHA512}$6$JzH6ag3fi52pFYnj$ZxOQdEr2FLkAMFjrB0cEyJeLc6K6XI0C2UcrXXVqbTL\/\/XobDfQ7KDoxOLMhTRc6NU3VXHD1CwVpoxq7VFbft. SnpINmFnM2ZpNTJwRlluag==",
-    "default": "lam",
-    "sessionTimeout": "30",
-    "hideLoginErrorDetails": "false",
-    "logLevel": "4",
-    "logDestination": "SYSLOG",
-    "allowedHosts": "",
-    "passwordMinLength": "10",
-    "passwordMinUpper": "0",
-    "passwordMinLower": "0",
-    "passwordMinNumeric": "0",
-    "passwordMinClasses": "0",
-    "passwordMinSymbol": "0",
-    "checkedRulesCount": "-1",
-    "passwordMustNotContainUser": "false",
-    "passwordMustNotContain3Chars": "false",
-    "externalPwdCheckUrl": "",
-    "errorReporting": "default",
-    "allowedHostsSelfService": "",
-    "license": "",
-    "licenseEmailFrom": "",
-    "licenseEmailTo": "",
-    "licenseWarningType": "all",
-    "licenseEmailDateSent": "",
-    "mailServer": "",
-    "mailUser": "",
-    "mailPassword": "",
-    "mailEncryption": "TLS",
-    "mailAttribute": "mail",
-    "mailBackupAttribute": "passwordselfresetbackupmail",
-    "configDatabaseType": "files",
-    "configDatabaseServer": "",
-    "configDatabasePort": "",
-    "configDatabaseName": "",
-    "configDatabaseUser": "",
-    "configDatabasePassword": "",
-    "moduleSettings": "eyJyZXF1ZXN0QWNjZXNzIjp7Imhpc3RvcnlSZXRlbnRpb25QZXJpb2QiOiIzNjUwIiwiZXhwaXJhdGlvblBlcmlvZCI6IjMwIn19"
-}
-EOL'
-
-rm /var/lib/ldap-account-manager/config/lam.conf
-sudo bash -c 'cat > /var/lib/ldap-account-manager/config/lam.conf << 'EOL'
+bash -c 'cat > /var/lib/ldap-account-manager/config/lam.conf << 'EOL'
 {
     "ServerURL": "ldap:\/\/localhost:389",
     "useTLS": "no",
     "followReferrals": "false",
     "pagedResults": "false",
-    "Passwd": "{CRYPT-SHA512}$6$MZYjgo\/qSdRDCUov$XTMH3ZOVmK77k6KXDknJV\/V\/AzcYPB2Xu4rdNRQ5A.lBQnIZnJtZvw309FKqac2syMGe6TZhtMblj9TTZmBt2\/ TVpZamdvL3FTZFJEQ1Vvdg==",
+    "Passwd": "{CRYPT-SHA512}$6$zvb8WVEHSAKEGtGO$573kA9Us8LtGLLm5Gu87P\/vIiF\/2Ol\/DauzPmUpvC4eCL\/t0WWiwBaY19Rx5G3wzbeZWWlE1kp2fikrpZTZ51\/ enZiOFdWRUhTQUtFR3RHTw==",
     "Admins": "cn=osproxy,ou=system,dc=amsa,dc=udl,dc=cat",
     "defaultLanguage": "en_GB.utf8",
     "scriptPath": "",
